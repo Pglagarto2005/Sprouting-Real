@@ -14,7 +14,7 @@ from streamlit_autorefresh import st_autorefresh
 
 # ─── PAGE CONFIG ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="PlantaPet",
+    page_title="Sprouting",
     page_icon="🌱",
     layout="centered",
     initial_sidebar_state="collapsed",
@@ -50,9 +50,9 @@ def get_shared() -> dict:
 @st.cache_resource
 def get_mqtt_client() -> mqtt.Client:
     shared = get_shared()
-    broker   = _secret("MQTT_BROKER",   "broker.hivemq.com")
+    broker   = _secret("MQTT_BROKER",   "broker.mqttdashboard.com")
     port     = int(_secret("MQTT_PORT", "1883"))
-    user     = _secret("MQTT_USER",     "")
+    user     = _secret("MQTT_USER",     "Planti")
     password = _secret("MQTT_PASS",     "")
 
     def on_connect(client, _u, _f, rc):
