@@ -1,8 +1,14 @@
 import streamlit as st
 import random
-import time
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
+from streamlit_autorefresh import st_autorefresh
+
+# ------------------------------
+# AUTO REFRESH
+# ------------------------------
+
+st_autorefresh(interval=2000, key="refresh")
 
 # ------------------------------
 # MQTT CONFIG
@@ -26,9 +32,6 @@ if "felicidad" not in st.session_state:
 if "humedad" not in st.session_state:
     st.session_state.humedad = 0
 
-if "mqtt_started" not in st.session_state:
-    st.session_state.mqtt_started = False
-
 # ------------------------------
 # MQTT CALLBACK
 # ------------------------------
@@ -48,30 +51,28 @@ def on_message(client, userdata, msg):
         print(e)
 
 # ------------------------------
-# INICIAR MQTT SOLO UNA VEZ
+# MQTT CLIENT
 # ------------------------------
 
-if not st.session_state.mqtt_started:
+if "mqtt_client" not in st.session_state:
 
     client = mqtt.Client()
 
     client.on_message = on_message
 
-    client.connect(BROKER, 1883)
+    try:
 
-    client.subscribe(TOPIC_HUMEDAD)
+        client.connect(BROKER, 1883)
 
-    client.loop_start()
+        client.subscribe(TOPIC_HUMEDAD)
 
-    st.session_state.mqtt_started = True
+        client.loop_start()
 
-# ------------------------------
-# AUTO REFRESH
-# ------------------------------
+        st.session_state.mqtt_client = client
 
-time.sleep(1)
+    except:
 
-st.rerun()
+        st.warning("No se pudo conectar MQTT")
 
 # ------------------------------
 # ESTILOS
@@ -146,15 +147,21 @@ if st.session_state.pantalla == "maceta":
 
     if st.button("💦 Regar Planta"):
 
-        publish.single(
-            TOPIC_REGAR,
-            "ON",
-            hostname=BROKER
-        )
+        try:
 
-        st.success("Planta regada ✨")
+            publish.single(
+                TOPIC_REGAR,
+                "ON",
+                hostname=BROKER
+            )
 
-        st.balloons()
+            st.success("Planta regada ✨")
+
+            st.balloons()
+
+        except:
+
+            st.error("No se pudo enviar mensaje MQTT")
 
 # ------------------------------
 # PANTALLA CUARTO
@@ -170,11 +177,19 @@ if st.session_state.pantalla == "cuarto":
         f"❤️ Felicidad: {st.session_state.felicidad}"
     )
 
+    # ------------------------------
+    # DAR CARIÑO
+    # ------------------------------
+
     if st.button("🤗 Dar cariño"):
 
         st.session_state.felicidad += 5
 
         st.success("Tu planta está feliz 🌱")
+
+    # ------------------------------
+    # MENSAJES
+    # ------------------------------
 
     mensajes = [
 
