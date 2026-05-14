@@ -1,57 +1,120 @@
-#include <WiFi.h>
-#include <WebServer.h>
-#include <Servo.h>
+import streamlit as st
+import requests
+import random
 
-const char* ssid = "TU_WIFI";
-const char* password = "TU_PASSWORD";
+# ------------------------------
+# CONFIG
+# ------------------------------
 
-WebServer server(80);
+ESP32_URL = "http://192.168.1.50"
 
-Servo servoMotor;
+# ------------------------------
+# SESSION STATE
+# ------------------------------
 
-int sensorPin = 34;
-int humedad = 0;
+if "pantalla" not in st.session_state:
+    st.session_state.pantalla = "maceta"
 
-void setup() {
+if "felicidad" not in st.session_state:
+    st.session_state.felicidad = 70
 
-  Serial.begin(115200);
+if "humedad" not in st.session_state:
+    st.session_state.humedad = 40
 
-  servoMotor.attach(13);
+# ------------------------------
+# ESTILOS
+# ------------------------------
 
-  WiFi.begin(ssid, password);
+st.markdown(
+    """
+    <style>
+    .main {
+        background-color: #dfffd8;
+    }
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Conectando...");
-  }
+    .stButton button {
+        background-color: #ffb347;
+        color: white;
+        border-radius: 20px;
+        border: none;
+        padding: 10px 20px;
+        font-size: 18px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
-  Serial.println(WiFi.localIP());
+# ------------------------------
+# NAVBAR
+# ------------------------------
 
-  server.on("/humedad", HTTP_GET, []() {
+col1, col2 = st.columns(2)
 
-    humedad = analogRead(sensorPin);
+with col1:
+    if st.button("🌱 Maceta"):
+        st.session_state.pantalla = "maceta"
 
-    int porcentaje = map(humedad, 4095, 0, 0, 100);
+with col2:
+    if st.button("🏠 Cuarto"):
+        st.session_state.pantalla = "cuarto"
 
-    String json = "{\"humedad\":" + String(porcentaje) + "}";
+# ------------------------------
+# PANTALLA MACETA
+# ------------------------------
 
-    server.send(200, "application/json", json);
-  });
+if st.session_state.pantalla == "maceta":
 
-  server.on("/regar", HTTP_GET, []() {
+    st.title("🌱 Plantagotchi")
 
-    servoMotor.write(90);
+    st.image("assets/planta_feliz.png", width=300)
 
-    delay(2000);
+    st.subheader("Humedad de la planta")
 
-    servoMotor.write(0);
+    st.progress(st.session_state.humedad)
 
-    server.send(200, "text/plain", "Regando planta");
-  });
+    st.write(f"💧 Humedad actual: {st.session_state.humedad}%")
 
-  server.begin();
-}
+    # Leer humedad real
+    try:
+        response = requests.get(f"{ESP32_URL}/humedad")
+        data = response.json()
+        st.session_state.humedad = data["humedad"]
+    except:
+        st.warning("No se pudo conectar con el sensor")
 
-void loop() {
-  server.handleClient();
-}
+    # Botón regar
+    if st.button("💦 Regar Planta"):
+
+        try:
+            requests.get(f"{ESP32_URL}/regar")
+            st.success("Planta regada ✨")
+            st.balloons()
+        except:
+            st.error("No se pudo conectar al ESP32")
+
+# ------------------------------
+# PANTALLA CUARTO
+# ------------------------------
+
+if st.session_state.pantalla == "cuarto":
+
+    st.title("🏠 Cuarto de tu Planta")
+
+    st.image("assets/planta_feliz.png", width=250)
+
+    st.write(f"❤️ Felicidad: {st.session_state.felicidad}")
+
+    if st.button("🤗 Dar cariño"):
+        st.session_state.felicidad += 5
+        st.success("Tu planta está feliz 🌱")
+
+    mensajes = [
+        "Gracias por cuidarme 🌱",
+        "Tengo sed 😢",
+        "Estoy creciendo ✨",
+        "Hoy me siento feliz ☀️"
+    ]
+
+    if st.button("💬 Hablar"):
+        st.info(random.choice(mensajes))
