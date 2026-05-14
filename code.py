@@ -57,7 +57,8 @@ try:
     client.loop_start()
 
 except:
-    st.warning("No se pudo conectar al broker MQTT")
+
+    st.warning("No se pudo conectar MQTT")
 
 # ------------------------------
 # ESTILOS
@@ -118,7 +119,7 @@ if st.session_state.pantalla == "maceta":
 
     st.image("assets/planta_feliz.png", width=300)
 
-    st.subheader("Humedad de la planta")
+    st.subheader("Humedad del ambiente")
 
     st.progress(st.session_state.humedad)
 
