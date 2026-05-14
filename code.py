@@ -1,5 +1,6 @@
 import streamlit as st
 import random
+import time
 import paho.mqtt.client as mqtt
 import paho.mqtt.publish as publish
 
@@ -25,6 +26,9 @@ if "felicidad" not in st.session_state:
 if "humedad" not in st.session_state:
     st.session_state.humedad = 0
 
+if "mqtt_started" not in st.session_state:
+    st.session_state.mqtt_started = False
+
 # ------------------------------
 # MQTT CALLBACK
 # ------------------------------
@@ -33,22 +37,25 @@ def on_message(client, userdata, msg):
 
     try:
 
-        humedad = msg.payload.decode()
+        humedad = int(msg.payload.decode())
 
-        st.session_state.humedad = int(humedad)
+        st.session_state.humedad = humedad
 
-    except:
-        pass
+        print("Humedad recibida:", humedad)
+
+    except Exception as e:
+
+        print(e)
 
 # ------------------------------
-# MQTT CLIENT
+# INICIAR MQTT SOLO UNA VEZ
 # ------------------------------
 
-client = mqtt.Client()
+if not st.session_state.mqtt_started:
 
-client.on_message = on_message
+    client = mqtt.Client()
 
-try:
+    client.on_message = on_message
 
     client.connect(BROKER, 1883)
 
@@ -56,9 +63,15 @@ try:
 
     client.loop_start()
 
-except:
+    st.session_state.mqtt_started = True
 
-    st.warning("No se pudo conectar MQTT")
+# ------------------------------
+# AUTO REFRESH
+# ------------------------------
+
+time.sleep(1)
+
+st.rerun()
 
 # ------------------------------
 # ESTILOS
@@ -133,21 +146,15 @@ if st.session_state.pantalla == "maceta":
 
     if st.button("💦 Regar Planta"):
 
-        try:
+        publish.single(
+            TOPIC_REGAR,
+            "ON",
+            hostname=BROKER
+        )
 
-            publish.single(
-                TOPIC_REGAR,
-                "ON",
-                hostname=BROKER
-            )
+        st.success("Planta regada ✨")
 
-            st.success("Planta regada ✨")
-
-            st.balloons()
-
-        except:
-
-            st.error("No se pudo enviar mensaje MQTT")
+        st.balloons()
 
 # ------------------------------
 # PANTALLA CUARTO
@@ -163,19 +170,11 @@ if st.session_state.pantalla == "cuarto":
         f"❤️ Felicidad: {st.session_state.felicidad}"
     )
 
-    # ------------------------------
-    # DAR CARIÑO
-    # ------------------------------
-
     if st.button("🤗 Dar cariño"):
 
         st.session_state.felicidad += 5
 
         st.success("Tu planta está feliz 🌱")
-
-    # ------------------------------
-    # MENSAJES
-    # ------------------------------
 
     mensajes = [
 
